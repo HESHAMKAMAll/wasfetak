@@ -32,7 +32,7 @@ class _SuggestedRecipesPageState extends State<SuggestedRecipesPage> {
     final bannerAd = BannerAd(
       size: AdSize.banner,
       // adUnitId: "ca-app-pub-3940256099942544/9214589741", // test
-      adUnitId: "ca-app-pub-",
+      adUnitId: "ca-app-pub-5540639147564699/2119920974",
       request: const AdRequest(),
       listener: BannerAdListener(
         // Called when an ad is successfully received.

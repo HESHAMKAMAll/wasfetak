@@ -1,8 +1,8 @@
 
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:google_ml_kit/google_ml_kit.dart';
+// import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -16,38 +16,70 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+
+
+
+
+  // متغيرات الحالة
   File? _image;
-  final picker = ImagePicker();
   String recognizedText = '';
   bool isProcessing = false;
-  BannerAd? _bannerAd;
+  bool isTextMode = false;
+  BannerAd? bannerAd;
 
-  // إضافة متغيرات جديدة للمكونات النصية
-  final List<String> _ingredients = [];
-  final TextEditingController _ingredientController = TextEditingController();
-  bool _isTextMode = false; // للتبديل بين وضع الصورة والنص
+  // متغيرات المكونات
+  final List<String> ingredients = [];
+  final TextEditingController ingredientController = TextEditingController();
 
-  // تعريف الألوان الأساسية
+  // الأدوات المساعدة
+  final picker = ImagePicker();
+  final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+
+  // الألوان
   final primaryColor = const Color(0xFF6750A4);
   final secondaryColor = const Color(0xFF625B71);
   final surfaceColor = const Color(0xFFFFFBFE);
   final backgroundColor = const Color(0xFFF6F5F7);
+
   @override
   void initState() {
-    _loadAd();
     super.initState();
+    _loadAd();
   }
-
 
   @override
   void dispose() {
-    _ingredientController.dispose();
+    ingredientController.dispose();
+    textRecognizer.close();
+    bannerAd?.dispose();
     super.dispose();
   }
 
-  Future<void> _getImage(ImageSource source) async {
+  // تحميل الإعلان
+  void _loadAd() {
+    bannerAd = BannerAd(
+      size: AdSize.banner,
+      adUnitId: 'YOUR_AD_UNIT_ID', // استبدل بمعرف الإعلان الخاص بك
+      listener: BannerAdListener(
+        onAdLoaded: (ad) => setState(() {}),
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+          print('Ad load failed: $error');
+        },
+      ),
+      request: AdRequest(),
+    )..load();
+  }
+
+  // التقاط الصورة
+  Future<void> getImage(ImageSource source) async {
     try {
-      final pickedFile = await picker.pickImage(source: source);
+      final XFile? pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
 
       if (pickedFile != null) {
         setState(() {
@@ -55,52 +87,69 @@ class _HomePageState extends State<HomePage> {
           isProcessing = true;
         });
 
-        await _processImage();
+        await processImage();
       }
     } catch (e) {
-      _showError('خطأ في التقاط الصورة: $e');
+      showError('خطأ في التقاط الصورة: $e');
     }
   }
 
-  Future<void> _processImage() async {
+  // معالجة الصورة
+  Future<void> processImage() async {
     if (_image == null) return;
 
-    final inputImage = InputImage.fromFile(_image!);
-    final textDetector = GoogleMlKit.vision.textDetector();
-
     try {
-      final recognizedText = await textDetector.processImage(inputImage);
+      final inputImage = InputImage.fromFile(_image!);
+      final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
+
       setState(() {
         this.recognizedText = recognizedText.text;
         isProcessing = false;
       });
 
-      List<String> ingredients = recognizedText.text.split('\n');
-      _navigateToRecipes(ingredients);
+      // تحويل النص المتعرف عليه إلى مكونات
+      final List<String> newIngredients = recognizedText.text
+          .split('\n')
+          .where((line) => line.trim().isNotEmpty)
+          .toList();
+
+      if (newIngredients.isNotEmpty) {
+        setState(() {
+          ingredients.addAll(newIngredients);
+        });
+      }
+
     } catch (e) {
-      _showError('خطأ في معالجة الصورة: $e');
+      showError('خطأ في معالجة الصورة: $e');
+    } finally {
       setState(() {
         isProcessing = false;
       });
     }
   }
 
-  void _addIngredient() {
-    if (_ingredientController.text.isNotEmpty) {
+  // إضافة مكون يدوياً
+  void addIngredient() {
+    final ingredient = ingredientController.text.trim();
+    if (ingredient.isNotEmpty) {
       setState(() {
-        _ingredients.add(_ingredientController.text);
-        _ingredientController.clear();
+        ingredients.add(ingredient);
+        ingredientController.clear();
       });
     }
   }
 
-  void _removeIngredient(int index) {
-    setState(() {
-      _ingredients.removeAt(index);
-    });
+  // إزالة مكون
+  void removeIngredient(int index) {
+    if (index >= 0 && index < ingredients.length) {
+      setState(() {
+        ingredients.removeAt(index);
+      });
+    }
   }
 
-  void _navigateToRecipes(List<String> ingredients) {
+  // الانتقال إلى صفحة الوصفات
+  void navigateToRecipes(List<String> ingredients) {
     if (ingredients.isNotEmpty) {
       Navigator.push(
         context,
@@ -109,46 +158,61 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     } else {
-      _showError('الرجاء إضافة مكون واحد على الأقل');
+      showError('الرجاء إضافة مكون واحد على الأقل');
     }
   }
 
-  void _showError(String message) {
+  // عرض رسالة خطأ
+  void showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
   }
 
-  void _loadAd() {
-    final bannerAd = BannerAd(
-      size: AdSize.largeBanner,
-      // adUnitId: "ca-app-pub-3940256099942544/9214589741", // test
-      adUnitId: "ca-app-pub-",
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        // Called when an ad is successfully received.
-        onAdLoaded: (ad) {
-          if (!mounted) {
-            ad.dispose();
-            return;
-          }
-          setState(() {
-            _bannerAd = ad as BannerAd;
-          });
-        },
-        // Called when an ad request failed.
-        onAdFailedToLoad: (ad, error) {
-          debugPrint('BannerAd failed to load: $error');
-          ad.dispose();
-        },
+  // عرض مربع حوار اختيار مصدر الصورة
+  void showImageSourceDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('اختر مصدر الصورة'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.camera_alt),
+              title: Text('الكاميرا'),
+              onTap: () {
+                Navigator.pop(context);
+                getImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_library),
+              title: Text('معرض الصور'),
+              onTap: () {
+                Navigator.pop(context);
+                getImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
       ),
     );
+  }
 
-    // Start loading.
-    bannerAd.load();
+  // تبديل وضع الإدخال
+  void toggleInputMode() {
+    setState(() {
+      isTextMode = !isTextMode;
+    });
   }
 
   @override
@@ -171,16 +235,16 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: IconButton(
               icon: Icon(
-                _isTextMode ? Icons.camera_alt : Icons.edit,
+                isTextMode ? Icons.camera_alt : Icons.edit,
                 color: primaryColor,
               ),
               onPressed: () {
                 setState(() {
-                  _isTextMode = !_isTextMode;
+                  isTextMode = !isTextMode;
                   _image = null;
                   recognizedText = '';
-                  _ingredients.clear();
-                  _ingredientController.clear();
+                  ingredients.clear();
+                  ingredientController.clear();
                 });
               },
             ),
@@ -214,7 +278,7 @@ class _HomePageState extends State<HomePage> {
               ),
               child: Center(
                 child: Text(
-                  _isTextMode ? 'إدخال المكونات يدوياً' : 'التقاط صورة للمكونات',
+                  isTextMode ? 'إدخال المكونات يدوياً' : 'التقاط صورة للمكونات',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -230,13 +294,13 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
 
-                  if (!_isTextMode) ...[
+                  if (!isTextMode) ...[
                     if(_image == null)
-                      Center(child: _bannerAd == null
+                      Center(child: bannerAd == null
                       // Nothing to render yet.
                           ? const SizedBox()
                       // The actual ad.
-                          : SizedBox(height: 90,child: AdWidget(ad: _bannerAd!))),
+                          : SizedBox(height: 90,child: AdWidget(ad: bannerAd!))),
                     if (_image != null) ...[
                       Card(
                         elevation: 4,
@@ -307,7 +371,7 @@ class _HomePageState extends State<HomePage> {
                           children: [
                             Expanded(
                               child: TextField(
-                                controller: _ingredientController,
+                                controller: ingredientController,
                                 decoration: InputDecoration(
                                   hintText: 'أدخل المكون',
                                   border: OutlineInputBorder(
@@ -326,7 +390,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                             const SizedBox(width: 12),
                             ElevatedButton(
-                              onPressed: _addIngredient,
+                              onPressed: addIngredient,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primaryColor,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -343,7 +407,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
-                    if (_ingredients.isNotEmpty) ...[
+                    if (ingredients.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       Text(
                         'المكونات المضافة:',
@@ -358,7 +422,7 @@ class _HomePageState extends State<HomePage> {
                       ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _ingredients.length,
+                        itemCount: ingredients.length,
                         itemBuilder: (context, index) {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8.0),
@@ -373,14 +437,14 @@ class _HomePageState extends State<HomePage> {
                                   vertical: 8,
                                 ),
                                 title: Text(
-                                  _ingredients[index],
+                                  ingredients[index],
                                   style: const TextStyle(fontSize: 16),
                                   textDirection: TextDirection.rtl,
                                 ),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.delete),
                                   color: Colors.red[400],
-                                  onPressed: () => _removeIngredient(index),
+                                  onPressed: () => removeIngredient(index),
                                 ),
                               ),
                             ),
@@ -389,7 +453,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
-                        onPressed: () => _navigateToRecipes(_ingredients),
+                        onPressed: () => navigateToRecipes(ingredients),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
                           padding: const EdgeInsets.symmetric(
@@ -414,7 +478,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      bottomNavigationBar: !_isTextMode
+      bottomNavigationBar: !isTextMode
           ? Container(
         decoration: BoxDecoration(
           color: surfaceColor,
@@ -437,7 +501,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _getImage(ImageSource.camera),
+                  onPressed: () => getImage(ImageSource.camera),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -455,7 +519,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(width: 16),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _getImage(ImageSource.gallery),
+                  onPressed: () => getImage(ImageSource.gallery),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: secondaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 16),
