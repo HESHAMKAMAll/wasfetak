@@ -1,5 +1,15 @@
 # Wasfaty – Cook with What You Have!
 
+## 🖼️ Screenshots
+Here are some previews of the Wasfaty app:
+
+![Screenshot 1](https://drive.google.com/uc?export=view&id=1fy5fgHMM5_y68JC73c0JnlgkNCU4QFX9)
+![Screenshot 2](https://drive.google.com/uc?export=view&id=1GsvHMraLHYmV621uk36NwpjiHSktwOFG)
+![Screenshot 3](https://drive.google.com/uc?export=view&id=17m-CXre0cEkmt1taEII589ad7HuwIRFo)
+![Screenshot 4](https://drive.google.com/uc?export=view&id=1oIc6ICddJYmL-AVJZIGy-9END4zQV9jT)
+![Screenshot 5](https://drive.google.com/uc?export=view&id=1di-ofuvChAM3OjDnq1mAfApuudS6_49p)
+![Screenshot 6](https://drive.google.com/uc?export=view&id=1yImPXKZYjb1UOqNd_6MPzPvRnFQ31eO9)
+
 ## 📌 Overview
 Wasfaty is a smart recipe app that helps users create delicious meals based on the ingredients they already have. By using AI-powered ingredient recognition, the app suggests recipes tailored to available ingredients, making cooking effortless, efficient, and fun.
 
@@ -36,16 +46,6 @@ Wasfaty is a smart recipe app that helps users create delicious meals based on t
    ```bash
    flutter run
    ```
-
-## 🖼️ Screenshots
-Here are some previews of the Wasfaty app:
-
-![Screenshot 1](https://drive.google.com/uc?export=view&id=1yImPXKZYjb1UOqNd_6MPzPvRnFQ31eO9)
-![Screenshot 2](https://drive.google.com/uc?export=view&id=17m-CXre0cEkmt1taEII589ad7HuwIRFo)
-![Screenshot 3](https://drive.google.com/uc?export=view&id=1oIc6ICddJYmL-AVJZIGy-9END4zQV9jT)
-![Screenshot 4](https://drive.google.com/uc?export=view&id=1di-ofuvChAM3OjDnq1mAfApuudS6_49p)
-![Screenshot 5](https://drive.google.com/uc?export=view&id=1GsvHMraLHYmV621uk36NwpjiHSktwOFG)
-![Screenshot 6](https://drive.google.com/uc?export=view&id=1fy5fgHMM5_y68JC73c0JnlgkNCU4QFX9)
 
 ## 🛠️ Technologies Used
 - **Flutter** for cross-platform app development.
